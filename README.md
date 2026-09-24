@@ -1,1 +1,1 @@
-# kurgyzstan-map
+# kyrgyzstan-map
