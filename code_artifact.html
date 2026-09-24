@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="ky">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8-класс: Жандуу карта — Интерактивдүү көргөзмө</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- QRCode JS Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        kyrgyzGreen: '#0D6841',
+                        kyrgyzRed: '#C8102E',
+                        kyrgyzGold: '#EAA123',
+                        kyrgyzBlue: '#0084B4',
+                        kyrgyzDark: '#111827',
+                        kyrgyzBg: '#F7F5F0'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@700&family=Montserrat:wght@400;600;700;800&display=swap');
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #F7F5F0;
+            background-image: radial-gradient(#D3C9B4 0.8px, transparent 0.8px);
+            background-size: 24px 24px;
+        }
+
+        .font-comfortaa {
+            font-family: 'Comfortaa', cursive;
+        }
+
+        /* SVG Map Custom Styles */
+        .map-region {
+            fill: #0D6841;
+            stroke: #FFFFFF;
+            stroke-width: 2.5;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.15));
+        }
+
+        .map-region:hover {
+            fill: #EAA123 !important;
+            transform: translateY(-4px) scale(1.01);
+            stroke: #C8102E;
+            stroke-width: 3.5;
+            filter: drop-shadow(0px 10px 15px rgba(234, 161, 35, 0.4));
+        }
+
+        .map-region.active {
+            fill: #C8102E !important;
+            stroke: #EAA123;
+            stroke-width: 4;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(234, 161, 35, 0.3);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between text-slate-800">
+
+    <header class="bg-kyrgyzGreen text-white shadow-xl border-b-4 border-kyrgyzGold sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="w-11 h-11 rounded-2xl bg-kyrgyzGold flex items-center justify-center text-slate-900 text-2xl font-black shadow-lg">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-kyrgyzRed text-white text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full tracking-wider">8-класс</span>
+                        <span class="text-xs text-amber-200 font-semibold">Кыргыз тил жумалыгы</span>
+                    </div>
+                    <h1 class="text-xl sm:text-2xl font-bold font-comfortaa text-amber-100 leading-tight">
+                        Жандуу карта <span class="text-xs font-normal text-emerald-200 font-sans hidden sm:inline">— Интерактивдүү көргөзмө</span>
+                    </h1>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center space-x-2">
+                <button onclick="openQuestModal()" class="bg-kyrgyzGold hover:bg-amber-500 text-slate-900 font-bold px-3.5 py-2 rounded-xl text-xs sm:text-sm shadow-md transition flex items-center gap-2 border border-amber-300">
+                    <i class="fa-solid fa-puzzle-piece text-kyrgyzRed text-base"></i>
+                    <span>«Картанын сырын тап» квести</span>
+                </button>
+                <button onclick="openPrintQrModal()" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-3 py-2 rounded-xl text-xs sm:text-sm transition border border-white/20 flex items-center gap-1.5">
+                    <i class="fa-solid fa-qrcode"></i>
+                    <span class="hidden md:inline">Бардык QR-коддор</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-grow space-y-6">
+
+        <!-- BANNER & CONCEPT SUMMARY -->
+        <div class="glass-panel rounded-3xl p-5 shadow-lg border-l-8 border-kyrgyzGold relative overflow-hidden">
+            <div class="grid lg:grid-cols-12 gap-4 items-center">
+                <div class="lg:col-span-8 space-y-2">
+                    <div class="inline-flex items-center gap-2 bg-emerald-100 text-kyrgyzGreen px-3 py-1 rounded-full text-xs font-bold">
+                        <i class="fa-solid fa-heart text-kyrgyzRed"></i> Тема: «Менин мекеним – менин жүрөгүм»
+                    </div>
+                    <h2 class="text-lg sm:text-xl font-bold text-slate-900">
+                        Кыргызстандын маданиятын, тарыхын жана жаратылышын санарип изилдөө
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                        Объекттерге жайгаштырылган QR-кодду сканерлөө аркылуу уламыштар, макал-лакаптар, автордук ыр саптары жана аудио-гид ачылат.
+                    </p>
+                </div>
+                <div class="lg:col-span-4 flex flex-col sm:flex-row lg:flex-col gap-2 justify-end">
+                    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-kyrgyzGold text-slate-900 flex items-center justify-center font-bold text-lg">
+                            <i class="fa-solid fa-qrcode"></i>
+                        </div>
+                        <div class="text-xs">
+                            <div class="font-bold text-slate-800">Сканерле – Тыңда – Бил!</div>
+                            <div class="text-slate-500">QR-код аркылуу заматта кирүү</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN INTERACTIVE WORKSPACE -->
+        <div class="grid lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- LEFT: INTERACTIVE SVG MAP -->
+            <div class="lg:col-span-8 glass-panel rounded-3xl p-4 sm:p-6 shadow-xl relative flex flex-col justify-between items-center">
+                <div class="w-full flex justify-between items-center mb-3">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500 bg-slate-200/80 px-3 py-1 rounded-full flex items-center gap-1.5">
+                        <i class="fa-solid fa-arrow-pointer text-kyrgyzGold"></i> Аймакты тандаңыз
+                    </span>
+                    <span class="text-xs text-slate-500 font-semibold italic">Кыргыз Республикасы</span>
+                </div>
+
+                <!-- VECTOR MAP -->
+                <div class="w-full relative my-2">
+                    <svg viewBox="0 0 1000 550" class="w-full h-auto drop-shadow-2xl" id="kyrgyzstanMap">
+                        <!-- Compass Rose -->
+                        <g transform="translate(920, 60)" opacity="0.7">
+                            <circle cx="0" cy="0" r="22" fill="none" stroke="#0D6841" stroke-width="2"/>
+                            <path d="M0 -25 L5 -5 L25 0 L5 5 L0 25 L-5 5 L-25 0 L-5 -5 Z" fill="#EAA123"/>
+                            <text x="0" y="-28" font-size="11" font-weight="extrabold" fill="#0D6841" text-anchor="middle">Н</text>
+                        </g>
+
+                        <!-- REGION 1: BATKEN -->
+                        <path id="region-batken" class="map-region" 
+                              d="M 60,380 L 110,360 L 160,375 L 210,365 L 240,400 L 210,430 L 150,450 L 100,440 L 50,410 Z"
+                              onclick="selectRegion('batken')"></path>
+                        <text x="140" y="415" font-size="14" font-weight="bold" fill="#ffffff" pointer-events="none" text-anchor="middle">Баткен</text>
+
+                        <!-- REGION 2: JALAL-ABAD -->
+                        <path id="region-jalalabad" class="map-region" 
+                              d="M 210,365 L 260,280 L 320,250 L 400,260 L 410,340 L 350,380 L 280,390 L 240,400 Z"
+                              onclick="selectRegion('jalalabad')"></path>
+                        <text x="320" y="325" font-size="15" font-weight="bold" fill="#ffffff" pointer-events="none" text-anchor="middle">Жалал-Абад</text>
+
+                        <!-- REGION 3: OSH -->
+                        <path id="region-osh" class="map-region" 
+                              d="M 280,390 L 350,380 L 410,340 L 460,380 L 470,460 L 380,480 L 290,450 L 240,400 Z"
+                              onclick="selectRegion('osh')"></path>
+                        <text x="375" y="425" font-size="16" font-weight="bold" fill="#ffffff" pointer-events="none" text-anchor="middle">Ош</text>
+
+                        <!-- REGION 4: TALAS -->
+                        <path id="region-talas" class="map-region" 
+                              d="M 210,230 L 320,200 L 360,240 L 260,280 L 210,230 Z"
+                              onclick="selectRegion('talas')"></path>
+                        <text x="270" y="240" font-size="14" font-weight="bold" fill="#ffffff" pointer-events="none" text-anchor="middle">Талас</text>
+
+                        <!-- REGION 5: CHUY -->
+                        <path id="region-chuy" class="map-region" 
+                              d="M 320,200 L 520,150 L 650,180 L 580,240 L 480,240 L 360,240 Z"
+                              onclick="selectRegion('chuy')"></path>
+                        <text x="470" y="200" font-size="16" font-weight="bold" fill="#ffffff" pointer-events="none" text-anchor="middle">Чүй</text>
+
+                        <!-- BISHKEK CAPITAL PIN -->
+                        <circle id="region-bishkek" cx="480" cy="195" r="14" fill="#C8102E" stroke="#ffffff" stroke-width="2.5" class="cursor-pointer hover:scale-125 transition-transform" onclick="selectRegion('bishkek')"/>
+                        <text x="480" y="176" font-size="12" font-weight="extrabold" fill="#111827" text-anchor="middle">Бишкек ш.</text>
+
+                        <!-- REGION 6: NARYN -->
+                        <path id="region-naryn" class="map-region" 
+                              d="M 400,260 L 480,240 L 580,240 L 640,290 L 730,320 L 700,430 L 560,450 L 460,380 L 410,340 Z"
+                              onclick="selectRegion('naryn')"></path>
+                        <text x="560" y="340" font-size="17" font-weight="bold" fill="#ffffff" pointer-events="none" text-anchor="middle">Нарын</text>
+
+                        <!-- REGION 7: ISSYK-KUL -->
+                        <path id="region-issykkul" class="map-region" 
+                              d="M 650,180 L 880,180 L 930,260 L 800,320 L 730,320 L 640,290 L 580,240 Z"
+                              onclick="selectRegion('issykkul')"></path>
+                        <text x="810" y="260" font-size="16" font-weight="bold" fill="#ffffff" pointer-events="none" text-anchor="middle">Ысык-Көл</text>
+
+                        <!-- ISSYK-KUL LAKE VECTOR -->
+                        <ellipse cx="740" cy="230" rx="65" ry="25" fill="#0084B4" stroke="#ffffff" stroke-width="2"/>
+                        <text x="740" y="234" font-size="11" italic="true" fill="#ffffff" text-anchor="middle" pointer-events="none">Ысык-Көл</text>
+                    </svg>
+                </div>
+
+                <!-- QUICK SELECT BUTTONS -->
+                <div class="w-full flex flex-wrap gap-1.5 justify-center mt-3 pt-3 border-t border-slate-200">
+                    <button onclick="selectRegion('bishkek')" class="px-3 py-1 bg-slate-100 hover:bg-emerald-100 text-xs font-semibold rounded-lg text-slate-700 transition">Бишкек</button>
+                    <button onclick="selectRegion('chuy')" class="px-3 py-1 bg-slate-100 hover:bg-emerald-100 text-xs font-semibold rounded-lg text-slate-700 transition">Чүй</button>
+                    <button onclick="selectRegion('issykkul')" class="px-3 py-1 bg-slate-100 hover:bg-emerald-100 text-xs font-semibold rounded-lg text-slate-700 transition">Ысык-Көл</button>
+                    <button onclick="selectRegion('naryn')" class="px-3 py-1 bg-slate-100 hover:bg-emerald-100 text-xs font-semibold rounded-lg text-slate-700 transition">Нарын</button>
+                    <button onclick="selectRegion('talas')" class="px-3 py-1 bg-slate-100 hover:bg-emerald-100 text-xs font-semibold rounded-lg text-slate-700 transition">Талас</button>
+                    <button onclick="selectRegion('jalalabad')" class="px-3 py-1 bg-slate-100 hover:bg-emerald-100 text-xs font-semibold rounded-lg text-slate-700 transition">Жалал-Абад</button>
+                    <button onclick="selectRegion('osh')" class="px-3 py-1 bg-slate-100 hover:bg-emerald-100 text-xs font-semibold rounded-lg text-slate-700 transition">Ош</button>
+                    <button onclick="selectRegion('batken')" class="px-3 py-1 bg-slate-100 hover:bg-emerald-100 text-xs font-semibold rounded-lg text-slate-700 transition">Баткен</button>
+                </div>
+            </div>
+
+            <!-- RIGHT: SIDEBAR PREVIEW & EVALUATION -->
+            <div class="lg:col-span-4 space-y-4">
+                
+                <!-- REGION DETAIL CARD -->
+                <div id="regionDetailCard" class="glass-panel rounded-3xl p-5 shadow-xl border-t-4 border-kyrgyzGreen space-y-4">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-[11px] font-bold text-kyrgyzGold uppercase tracking-wider block">Тандалган аймак</span>
+                            <h3 id="panelRegionName" class="text-2xl font-bold text-slate-900 font-comfortaa">Чүй облусу</h3>
+                        </div>
+                        <div id="panelBadge" class="w-12 h-12 rounded-2xl bg-emerald-100 text-kyrgyzGreen flex items-center justify-center font-bold text-xl shadow-sm">
+                            <i class="fa-solid fa-monument"></i>
+                        </div>
+                    </div>
+
+                    <p id="panelDescription" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                        Чүй өрөөнү — тарыхый Жибек жолунун боюнда жайгашкан, байыркы Бурана мунарасы жана кооз ашуулары менен белгилүү аймак.
+                    </p>
+
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="bg-slate-100/80 p-2.5 rounded-xl border border-slate-200">
+                            <div class="text-[10px] text-slate-500">Борбордук шаары</div>
+                            <div id="panelCapital" class="font-bold text-slate-800 mt-0.5">Бишкек / Токмок</div>
+                        </div>
+                        <div class="bg-slate-100/80 p-2.5 rounded-xl border border-slate-200">
+                            <div class="text-[10px] text-slate-500">Башкы объект</div>
+                            <div id="panelLandmark" class="font-bold text-slate-800 mt-0.5">Бурана мунарасы</div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2 pt-1">
+                        <button onclick="openRegionFullModal()" class="w-full bg-kyrgyzGreen hover:bg-emerald-800 text-white font-bold py-3 px-4 rounded-xl shadow-md transition flex items-center justify-center gap-2 text-sm">
+                            <i class="fa-solid fa-book-open"></i> Толук маалыматты ачуу
+                        </button>
+                        <button onclick="showRegionQrCode()" class="w-full bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold py-2.5 px-4 rounded-xl transition text-xs flex items-center justify-center gap-2 border border-amber-300">
+                            <i class="fa-solid fa-qrcode"></i> QR-кодду кароо / Сканерлөө
+                        </button>
+                    </div>
+                </div>
+
+                <!-- EVALUATION CRITERIA (FROM POSTER CONTEXT) -->
+                <div class="glass-panel rounded-3xl p-5 shadow-md space-y-3">
+                    <h4 class="text-xs font-extrabold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-star text-kyrgyzGold"></i> Баалоо критерийлери (100%)
+                    </h4>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200">
+                            <i class="fa-solid fa-book text-kyrgyzGreen mb-1 block text-sm"></i>
+                            <span class="font-bold text-slate-800 block">Мазмун байлыгы</span>
+                            <span class="text-emerald-700 font-extrabold">25%</span>
+                        </div>
+                        <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200">
+                            <i class="fa-solid fa-lightbulb text-kyrgyzGold mb-1 block text-sm"></i>
+                            <span class="font-bold text-slate-800 block">Чыгармачылык</span>
+                            <span class="text-amber-700 font-extrabold">25%</span>
+                        </div>
+                        <div class="p-2.5 bg-blue-50 rounded-xl border border-blue-200">
+                            <i class="fa-solid fa-qrcode text-kyrgyzBlue mb-1 block text-sm"></i>
+                            <span class="font-bold text-slate-800 block">Интерактивдүүлүк</span>
+                            <span class="text-blue-700 font-extrabold">25%</span>
+                        </div>
+                        <div class="p-2.5 bg-rose-50 rounded-xl border border-rose-200">
+                            <i class="fa-solid fa-palette text-kyrgyzRed mb-1 block text-sm"></i>
+                            <span class="font-bold text-slate-800 block">Көркөмдүк & Сапат</span>
+                            <span class="text-rose-700 font-extrabold">25%</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- FULL REGION MODAL -->
+    <div id="fullRegionModal" class="fixed inset-0 bg-slate-900/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border-2 border-kyrgyzGold relative">
+            <div class="sticky top-0 bg-kyrgyzGreen text-white p-5 rounded-t-3xl flex justify-between items-center border-b-4 border-kyrgyzGold z-10">
+                <div class="flex items-center gap-3">
+                    <div id="modalIcon" class="w-10 h-10 rounded-xl bg-kyrgyzGold text-slate-900 flex items-center justify-center text-lg font-black">
+                        <i class="fa-solid fa-location-dot"></i>
+                    </div>
+                    <div>
+                        <h3 id="modalRegionTitle" class="text-2xl font-bold font-comfortaa">Чүй облусу</h3>
+                        <p class="text-xs text-emerald-200">Тарых, уламыш жана автордук ырлар</p>
+                    </div>
+                </div>
+                <button onclick="closeFullModal()" class="text-white/80 hover:text-white text-2xl w-9 h-9 rounded-full bg-white/10 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-6">
+                <!-- Audio Player Simulator -->
+                <div class="bg-slate-900 text-white rounded-2xl p-4 shadow-lg flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <button id="audioPlayBtn" onclick="toggleAudioSimulation()" class="w-12 h-12 rounded-full bg-kyrgyzGold text-slate-900 flex items-center justify-center text-xl font-bold hover:scale-105 transition shadow">
+                            <i id="audioIcon" class="fa-solid fa-play ml-0.5"></i>
+                        </button>
+                        <div>
+                            <div class="text-sm font-bold text-amber-200">Аудио коштоо & Гид</div>
+                            <div id="audioStatus" class="text-xs text-slate-400">Угуу үчүн басыңыз</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span class="w-1 h-4 bg-kyrgyzGold animate-pulse"></span>
+                        <span class="w-1 h-6 bg-kyrgyzGold animate-pulse delay-75"></span>
+                        <span class="w-1 h-3 bg-kyrgyzGold animate-pulse delay-150"></span>
+                    </div>
+                </div>
+
+                <!-- Legend / Story -->
+                <div>
+                    <h4 class="text-sm font-bold text-kyrgyzGreen mb-2 flex items-center gap-2 border-b pb-1">
+                        <i class="fa-solid fa-book-bookmark text-kyrgyzGold"></i> Уламыш же Тарыхый баян
+                    </h4>
+                    <p id="modalLegend" class="text-xs sm:text-sm text-slate-700 leading-relaxed bg-amber-50/60 p-4 rounded-2xl border border-amber-200/80 italic">
+                        Уламыш маалыматы...
+                    </p>
+                </div>
+
+                <!-- Poem -->
+                <div>
+                    <h4 class="text-sm font-bold text-kyrgyzGreen mb-2 flex items-center gap-2 border-b pb-1">
+                        <i class="fa-solid fa-feather-pointed text-kyrgyzGold"></i> Автордук ыр саптары
+                    </h4>
+                    <div id="modalPoem" class="text-xs sm:text-sm text-slate-800 font-serif whitespace-pre-line bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center leading-loose">
+                        Ыр саптары...
+                    </div>
+                </div>
+
+                <!-- Facts -->
+                <div>
+                    <h4 class="text-sm font-bold text-kyrgyzGreen mb-2 flex items-center gap-2 border-b pb-1">
+                        <i class="fa-solid fa-lightbulb text-kyrgyzGold"></i> Кызыктуу өзгөчөлүктөрү
+                    </h4>
+                    <ul id="modalFacts" class="text-xs sm:text-sm text-slate-700 space-y-1.5 list-disc list-inside">
+                        <li>Факт 1</li>
+                    </ul>
+                </div>
+
+                <!-- QR Box -->
+                <div class="bg-slate-100 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 border">
+                    <div>
+                        <h5 class="font-bold text-xs sm:text-sm text-slate-800">Бул аймактын атайын QR-коду</h5>
+                        <p class="text-xs text-slate-500">Стенддеги плакатка жайгаштырууга даяр</p>
+                    </div>
+                    <div id="modalQrCode" class="bg-white p-2 rounded-xl shadow border"></div>
+                </div>
+            </div>
+
+            <div class="bg-slate-100 p-4 rounded-b-3xl flex justify-end">
+                <button onclick="closeFullModal()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 px-6 rounded-xl text-xs sm:text-sm transition">
+                    Жабуу
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR CODE STANDALONE MODAL -->
+    <div id="qrModal" class="fixed inset-0 bg-slate-900/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border-2 border-kyrgyzGold relative">
+            <button onclick="closeQrModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <h3 id="qrModalTitle" class="text-xl font-bold text-slate-800 font-comfortaa mb-1">Чүй облусу</h3>
+            <p class="text-xs text-slate-500 mb-4">Сканерле – Тыңда – Бил!</p>
+
+            <div class="bg-amber-50 p-4 rounded-2xl inline-block border-2 border-dashed border-amber-300 mb-4">
+                <div id="standaloneQrContainer" class="flex justify-center"></div>
+            </div>
+
+            <p class="text-xs text-slate-600 mb-4">
+                Камераны багыттап сканерлеңиз же басып чыгаруу үчүн көчүрүп алыңыз.
+            </p>
+
+            <button onclick="closeQrModal()" class="w-full bg-kyrgyzGreen hover:bg-emerald-800 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition">
+                Түшүндүм
+            </button>
+        </div>
+    </div>
+
+    <!-- PRINT ALL QR CODES MODAL -->
+    <div id="printQrModal" class="fixed inset-0 bg-slate-900/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl border-2 border-kyrgyzGold">
+            <div class="flex justify-between items-center mb-4 border-b pb-3">
+                <h3 class="text-xl font-bold text-slate-800 font-comfortaa flex items-center gap-2">
+                    <i class="fa-solid fa-print text-kyrgyzGreen"></i> Бардык QR-коддор (Плакат/Стенд үчүн)
+                </h3>
+                <button onclick="closePrintQrModal()" class="text-slate-400 hover:text-slate-600 text-2xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div id="allQrGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 text-center"></div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button onclick="window.print()" class="bg-kyrgyzGold hover:bg-amber-500 text-slate-900 font-bold py-2.5 px-5 rounded-xl text-xs transition">
+                    <i class="fa-solid fa-print mr-1"></i> Басып чыгаруу (Print)
+                </button>
+                <button onclick="closePrintQrModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold py-2.5 px-5 rounded-xl text-xs transition">
+                    Жабуу
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QUEST MODAL -->
+    <div id="questModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border-4 border-kyrgyzGold relative">
+            <button onclick="closeQuestModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-2xl">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="text-center mb-6">
+                <div class="w-14 h-14 bg-amber-100 text-kyrgyzGold rounded-full flex items-center justify-center text-2xl mx-auto mb-2 border-2 border-amber-300">
+                    <i class="fa-solid fa-puzzle-piece"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-slate-800 font-comfortaa">«Картанын сырын тап» квести</h3>
+                <p class="text-xs text-slate-500">5 суроого туура жооп берип, жашыруун сөздү табыңыз!</p>
+            </div>
+
+            <div class="w-full bg-slate-200 h-2.5 rounded-full mb-6 overflow-hidden">
+                <div id="questProgressBar" class="bg-kyrgyzGold h-full w-0 transition-all duration-300"></div>
+            </div>
+
+            <div id="questContent" class="space-y-4"></div>
+
+            <div id="questResult" class="hidden text-center space-y-4 py-4">
+                <div class="text-5xl text-amber-500 animate-bounce">
+                    <i class="fa-solid fa-crown"></i>
+                </div>
+                <h4 class="text-2xl font-bold text-kyrgyzGreen">Азаматсыз! Квестти өттүңүз!</h4>
+                <p class="text-xs text-slate-600">Жашыруун ачкыч сөз:</p>
+                <div class="bg-amber-100 text-amber-950 text-2xl font-black p-3 rounded-2xl tracking-widest border-2 border-amber-300 uppercase">
+                    «КЫРГЫЗСТАН – АЛТЫН ТҮШӨГҮМ»
+                </div>
+                <button onclick="closeQuestModal(); triggerConfetti();" class="bg-kyrgyzGreen hover:bg-emerald-800 text-white font-bold py-3 px-6 rounded-xl text-xs transition shadow-lg">
+                    Сыйлыкты алуу
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="bg-slate-900 text-white mt-10 py-6 border-t-4 border-kyrgyzGold">
+        <div class="max-w-7xl mx-auto px-4 text-center space-y-2">
+            <p class="font-comfortaa text-lg text-amber-300 italic">"Ар бир жердин өзүнүн үнү бар..."</p>
+            <p class="text-xs text-slate-400">
+                «Менин мекеним – менин жүрөгүм» | 8-класс кыргыз тил жумалыгы үчүн интерактивдүү көргөзмө
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        const regionsData = {
+            'bishkek': {
+                name: 'Бишкек шаары',
+                capital: 'Республикалык борбор',
+                landmark: 'Ала-Тоо аянты',
+                icon: 'fa-city',
+                description: 'Кыргыз Республикасынын борбору, саясий жана маданий ордосу.',
+                legend: 'Бишкек баатыр тууралуу элдик уламыштарда анын эли-жерин коргогон кайраттуулугу баяндалат.',
+                poem: 'Ала-Тоонун кучагында калаам бар,\nАр бир көчө, сейил багы кабарчы.\nБишкегим – сен жүрөгүсүң өлкөмдүн!',
+                facts: ['Кыргызстандагы эң чоң шаар.', 'Эң жашыл калаалардын бири.']
+            },
+            'chuy': {
+                name: 'Чүй облусу',
+                capital: 'Бишкек / Токмок',
+                landmark: 'Бурана мунарасы',
+                icon: 'fa-monument',
+                description: 'Жибек жолунун боюндагы байыркы Бурана мунарасы жайгашкан аймак.',
+                legend: 'Батыш хан өз кызын сактоо үчүн соктурган Бурана мунарасы жөнүндө сырдуу аңыз.',
+                poem: 'Бурана калган байыркы замандардан,\nБаласагын калаасы мактанган.',
+                facts: ['Баласагын шаары ЮНЕСКОнун мурастар тизмесинде.', 'Ала-Арча коругу жайгашкан.']
+            },
+            'issykkul': {
+                name: 'Ысык-Көл облусу',
+                capital: 'Каракол шаары',
+                landmark: 'Ысык-Көл & Григорьев ашуусу',
+                icon: 'fa-water',
+                description: 'Кыргызстандын бермети болгон тунук, тоңбогон туздуу көл.',
+                legend: 'Сулуу кыздын тунук сүйүүсүнөн улам пайда болгон сыйкырдуу көл уламышы.',
+                poem: 'Мөлтүрөгөн көгүлтүр Ысык-Көлүм,\nТоолор курчап карайт сени тегерек.',
+                facts: ['Дүйнөдөгү эң терең тоо көлдөрүнүн бири (668 м).', 'Кышында тоңбойт.']
+            },
+            'naryn': {
+                name: 'Нарын облусу',
+                capital: 'Нарын шаары',
+                landmark: 'Таш-Рабат кербен-сарайы',
+                icon: 'fa-mountain',
+                description: 'Улуу Теңир-Тоонун арасындагы тарыхый салттар сакталган жер.',
+                legend: '15-кылымга таандык Жибек жолундагы таш кербен-сарай уламышы.',
+                poem: 'Нарын дарыя шаркырап агат шар аккан,\nНарын эли конок келсе кубанган.',
+                facts: ['Эң бийик тоолуу жана чоң аянтка ээ облус.', 'Соң-Көл жайлоосу бар.']
+            },
+            'talas': {
+                name: 'Талас облусу',
+                capital: 'Талас шаары',
+                landmark: 'Манастын күмбөзү',
+                icon: 'fa-shield-halved',
+                description: 'Айкөл Манас баатырдын Ордосу жайгашкан сыймыктуу жер.',
+                legend: 'Каныкей энебиз баатырды сактоо үчүн тургузган күмбөз уламышы.',
+                poem: 'Айкөл Манас мекени касиеттүү Таласым,\nКаныкейдин акылмандыгын билесиң.',
+                facts: ['Манас Ордо улуттук комплекси жайгашкан.', 'Берекелүү төө бурчак жери.']
+            },
+            'jalalabad': {
+                name: 'Жалал-Абад облусу',
+                capital: 'Жалал-Абад шаары',
+                landmark: 'Арсланбап жаңгак токою',
+                icon: 'fa-tree',
+                description: 'Дүйнөдөгү эң чоң табигый жаңгак токою жана Сары-Челек коругу.',
+                legend: 'Александр Македонский Грецияга алып кеткен жаңгак токою тууралуу аңыз.',
+                poem: 'Арсланбаптын жаңгак жыттуу токойлору,\nСары-Челек көлү сулуу табигат.',
+                facts: ['Арсланбап — эң чоң жаңгак токою.', 'Токтогул ГЭСи жайгашкан.']
+            },
+            'osh': {
+                name: 'Ош облусу',
+                capital: 'Ош шаары',
+                landmark: 'Сулайман-Тоо',
+                icon: 'fa-archway',
+                description: '3000 жылдык байыркы тарыхы бар Ош шаары жана ыйык Сулайман-Тоо.',
+                legend: 'Сулайман пайгамбар токтогон ыйык тоо жана шаардын келип чыгышы.',
+                poem: 'Үч миң жылдык тарыхы бар Ош шаары,\nСулайман-Тоо ыйык турат калкалап.',
+                facts: ['Сулайман-Тоо ЮНЕСКО мурасы катары катталган.', 'Кыргызстандын түштүк борбору.']
+            },
+            'batken': {
+                name: 'Баткен облусу',
+                capital: 'Баткен шаары',
+                landmark: 'Айгүл гүлү',
+                icon: 'fa-leaf',
+                description: 'Өзгөчө Айгүл гүлү жана ширин өрүгү менен белгилүү аймак.',
+                legend: 'Сүйүүсүнө ишенимдүү Айгүл кыз тууралуу кайгылуу жана кооз уламыш.',
+                poem: 'Айгүл гүлү жазга маалы ачылган,\nБаткенимдин өрүктөрү чачылган.',
+                facts: ['Айгүл гүлү жылына 1 гана жолу Апрелде гүлдөйт.', 'Баткен өрүгү атактуу.']
+            }
+        };
+
+        const questQuestions = [
+            { q: "1. Чүй аймагындагы ЮНЕСКО тизмесине кирген байыркы мунара кайсы?", options: ["Манастын күмбөзү", "Бурана мунарасы", "Таш-Рабат", "Узген мунарасы"], answer: 1 },
+            { q: "2. Дүйнөдөгү эң чоң табигый жаңгак токою кайсы облуста?", options: ["Баткен", "Нарын", "Жалал-Абад", "Ысык-Көл"], answer: 2 },
+            { q: "3. 3000 жылдык тарыхы бар ЮНЕСКО мурасына кирген ыйык тоо?", options: ["Хан-Теңири", "Сулайман-Тоо", "Ала-Арча", "Беш-Таш"], answer: 1 },
+            { q: "4. Апрель айында гана гүлдөөчү сейрек эндемиктүү гүл?", options: ["Май гүлү", "Айгүл гүлү", "Байчечекей", "Лайлак"], answer: 1 },
+            { q: "5. Айкөл Манастын күмбөзү кайсы аймакта жайгашкан?", options: ["Талас облусунда", "Чүй өрөөнүндө", "Ош шаарында", "Нарында"], answer: 0 }
+        ];
+
+        let currentRegionKey = 'chuy';
+        let currentQuestStep = 0;
+        let isAudioPlaying = false;
+
+        window.onload = function() {
+            selectRegion('chuy');
+        };
+
+        function selectRegion(key) {
+            if(!regionsData[key]) return;
+            currentRegionKey = key;
+
+            document.querySelectorAll('.map-region').forEach(el => el.classList.remove('active'));
+            const selectedPath = document.getElementById(`region-${key}`);
+            if(selectedPath) selectedPath.classList.add('active');
+
+            const data = regionsData[key];
+            document.getElementById('panelRegionName').innerText = data.name;
+            document.getElementById('panelDescription').innerText = data.description;
+            document.getElementById('panelCapital').innerText = data.capital;
+            document.getElementById('panelLandmark').innerText = data.landmark;
+            
+            document.getElementById('panelBadge').innerHTML = `<i class="fa-solid ${data.icon}"></i>`;
+        }
+
+        function openRegionFullModal() {
+            const data = regionsData[currentRegionKey];
+            document.getElementById('modalRegionTitle').innerText = data.name;
+            document.getElementById('modalLegend').innerText = data.legend;
+            document.getElementById('modalPoem').innerText = data.poem;
+
+            const factsUl = document.getElementById('modalFacts');
+            factsUl.innerHTML = '';
+            data.facts.forEach(fact => {
+                const li = document.createElement('li');
+                li.innerText = fact;
+                factsUl.appendChild(li);
+            });
+
+            const qrContainer = document.getElementById('modalQrCode');
+            qrContainer.innerHTML = '';
+            new QRCode(qrContainer, {
+                text: window.location.href + `#${currentRegionKey}`,
+                width: 80,
+                height: 80,
+                colorDark : "#0D6841"
+            });
+
+            document.getElementById('fullRegionModal').classList.remove('hidden');
+        }
+
+        function closeFullModal() {
+            document.getElementById('fullRegionModal').classList.add('hidden');
+            stopAudioSimulation();
+        }
+
+        function showRegionQrCode() {
+            const data = regionsData[currentRegionKey];
+            document.getElementById('qrModalTitle').innerText = data.name;
+
+            const container = document.getElementById('standaloneQrContainer');
+            container.innerHTML = '';
+            new QRCode(container, {
+                text: window.location.href + `#${currentRegionKey}`,
+                width: 150,
+                height: 150,
+                colorDark : "#C8102E"
+            });
+
+            document.getElementById('qrModal').classList.remove('hidden');
+        }
+
+        function closeQrModal() {
+            document.getElementById('qrModal').classList.add('hidden');
+        }
+
+        function openPrintQrModal() {
+            const container = document.getElementById('allQrGrid');
+            container.innerHTML = '';
+
+            Object.keys(regionsData).forEach(key => {
+                const item = regionsData[key];
+                const card = document.createElement('div');
+                card.className = "bg-amber-50/60 p-3 rounded-2xl border border-amber-200 text-center flex flex-col items-center justify-between";
+
+                const title = document.createElement('h5');
+                title.className = "font-bold text-xs text-slate-800 mb-1";
+                title.innerText = item.name;
+
+                const qrBox = document.createElement('div');
+                qrBox.className = "bg-white p-1.5 rounded-xl border shadow-sm my-1";
+
+                new QRCode(qrBox, {
+                    text: window.location.href + `#${key}`,
+                    width: 85,
+                    height: 85,
+                    colorDark : "#0D6841"
+                });
+
+                card.appendChild(title);
+                card.appendChild(qrBox);
+                container.appendChild(card);
+            });
+
+            document.getElementById('printQrModal').classList.remove('hidden');
+        }
+
+        function closePrintQrModal() {
+            document.getElementById('printQrModal').classList.add('hidden');
+        }
+
+        function toggleAudioSimulation() {
+            const icon = document.getElementById('audioIcon');
+            const status = document.getElementById('audioStatus');
+            if(!isAudioPlaying) {
+                isAudioPlaying = true;
+                icon.className = "fa-solid fa-pause";
+                status.innerText = "Аудио угулуп жатат...";
+            } else {
+                stopAudioSimulation();
+            }
+        }
+
+        function stopAudioSimulation() {
+            isAudioPlaying = false;
+            const icon = document.getElementById('audioIcon');
+            const status = document.getElementById('audioStatus');
+            if(icon && status) {
+                icon.className = "fa-solid fa-play ml-0.5";
+                status.innerText = "Угуу үчүн басыңыз";
+            }
+        }
+
+        function openQuestModal() {
+            currentQuestStep = 0;
+            document.getElementById('questResult').classList.add('hidden');
+            document.getElementById('questContent').classList.remove('hidden');
+            renderQuestStep();
+            document.getElementById('questModal').classList.remove('hidden');
+        }
+
+        function closeQuestModal() {
+            document.getElementById('questModal').classList.add('hidden');
+        }
+
+        function renderQuestStep() {
+            const progress = (currentQuestStep / questQuestions.length) * 100;
+            document.getElementById('questProgressBar').style.width = `${progress}%`;
+
+            if(currentQuestStep >= questQuestions.length) {
+                document.getElementById('questContent').classList.add('hidden');
+                document.getElementById('questResult').classList.remove('hidden');
+                return;
+            }
+
+            const qData = questQuestions[currentQuestStep];
+            document.getElementById('questContent').innerHTML = `
+                <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200">
+                    <h4 class="font-bold text-slate-800 text-sm sm:text-base mb-3">${qData.q}</h4>
+                    <div class="space-y-2">
+                        ${qData.options.map((opt, idx) => `
+                            <button onclick="checkQuestAnswer(${idx})" class="w-full text-left p-3 rounded-xl bg-white hover:bg-emerald-50 border border-slate-200 font-medium text-xs sm:text-sm text-slate-700 transition flex items-center justify-between">
+                                <span>${opt}</span>
+                                <i class="fa-regular fa-circle text-slate-300"></i>
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function checkQuestAnswer(idx) {
+            if(idx === questQuestions[currentQuestStep].answer) {
+                currentQuestStep++;
+                renderQuestStep();
+            } else {
+                alert("Туура эмес! Кайрадан аракет кылыңыз.");
+            }
+        }
+
+        function triggerConfetti() {
+            if(typeof confetti === 'function') {
+                confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+            }
+        }
+    </script>
+</body>
+</html>
