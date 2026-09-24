@@ -1,0 +1,1 @@
+# kurgyzstan-map
